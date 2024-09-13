@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { NavLink } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { z } from "zod";
@@ -18,7 +18,6 @@ const DataSchema = z.object({
     })
   ),
 });
-
 type DataSchemaType = z.infer<typeof DataSchema>;
 
 const Landing = () => {
@@ -33,6 +32,11 @@ const Landing = () => {
   });
 
   const { darkTheme } = useAppContext();
+
+  const navigate = useNavigate();
+  const displayFeaturedProduct = (id: number) => {
+    navigate(`/products/${id}`);
+  };
 
   return (
     <Wrapper>
@@ -75,7 +79,11 @@ const Landing = () => {
             <div className="featured-products">
               {data?.data.map((item) => {
                 return (
-                  <div key={item.id} className="featured-product">
+                  <div
+                    key={item.id}
+                    className="featured-product"
+                    onClick={() => displayFeaturedProduct(item.id)}
+                  >
                     <img
                       src={item.attributes.image}
                       alt={item.attributes.title}
@@ -223,8 +231,6 @@ const Wrapper = styled.main`
     .home-images {
       display: flex;
       overflow: hidden;
-      /* min-height: 10rem; */
-      /* border: 0.7rem solid black; */
     }
     .home-img {
       border: 0.7rem solid black;
