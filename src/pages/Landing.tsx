@@ -61,6 +61,7 @@ const Landing = () => {
               </button>
             </NavLink>
           </div>
+          {/* // FIXME: design as per website by adding sliding images */}
           <div className="home-images">
             <img src="/src/assets/hero1.png" alt="wp" className="home-img" />
             <img src="/src/assets/hero2.png" alt="wp" className="home-img" />
@@ -74,7 +75,7 @@ const Landing = () => {
           </h2>
           <hr />
           {isLoading ? (
-            <h1>Loading...</h1>
+            <h1 className="loading">Loading...</h1>
           ) : (
             <div className="featured-products">
               {data?.data.map((item) => {
@@ -172,6 +173,11 @@ const Wrapper = styled.main`
   }
   .fp-title-dark {
     color: white;
+  }
+  .loading {
+    font-size: 2rem;
+    text-align: center;
+    margin-top: 2rem;
   }
   .featured-products {
     margin-top: 3rem;

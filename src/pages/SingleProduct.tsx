@@ -26,7 +26,6 @@ const SingleProduct = () => {
   const { pathname } = location;
 
   const id = parseInt(pathname.split("products/")[1]);
-  console.log(id);
 
   const { data, isLoading } = useQuery<SingleProductType>({
     queryKey: ["single-product", id],
@@ -41,7 +40,13 @@ const SingleProduct = () => {
   const { darkTheme } = useAppContext();
 
   if (isLoading) {
-    return <h1 className="loading">Loading...</h1>;
+    return (
+      <Wrapper>
+        <div className="loading-section">
+          <h1 className="loading">Loading...</h1>;
+        </div>
+      </Wrapper>
+    );
   }
 
   return (
@@ -53,7 +58,7 @@ const SingleProduct = () => {
               <Link to="/" className={darkTheme ? "link link-dark" : "link"}>
                 Home
               </Link>{" "}
-              <span style={{color:'grey'}}>&#8827;</span>{" "}
+              <span style={{ color: "grey" }}>&#8827;</span>{" "}
               <Link
                 to="/products"
                 className={darkTheme ? "link link-dark" : "link"}
@@ -91,12 +96,14 @@ const SingleProduct = () => {
               >
                 Colors
               </p>
-              {data?.data.attributes.colors.map((item) => {
+              {data?.data.attributes.colors.map((item, index) => {
                 return (
+                  // FIXME: add active state to the buttons
                   <button
                     type="button"
                     style={{ backgroundColor: `${item}` }}
                     className="color"
+                    key={index}
                   ></button>
                 );
               })}
@@ -142,9 +149,13 @@ const SingleProduct = () => {
 export default SingleProduct;
 
 const Wrapper = styled.main`
+  .loading-section {
+    min-height: 100vh;
+  }
   .loading {
     padding: 5rem 2rem 0rem 2rem;
     text-align: center;
+    font-size: 3rem;
   }
   .main-section {
     min-height: 100vh;
