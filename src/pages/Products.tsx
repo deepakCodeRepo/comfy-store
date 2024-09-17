@@ -1,4 +1,4 @@
-import { useNavigate, Form, Link } from "react-router-dom";
+import { useNavigate, Form, Link, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -6,7 +6,7 @@ import { z } from "zod";
 // import { useAppContext } from "../utilities/AppProvider";
 import { HiViewGrid } from "react-icons/hi";
 import { IoMenu } from "react-icons/io5";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // Define the overall schema for the JSON object
 const DataSchema = z.object({
@@ -21,30 +21,69 @@ const DataSchema = z.object({
       }),
     })
   ),
+  meta: z.object({
+    pagination: z.object({
+      pageCount: z.number(),
+    }),
+  }),
 });
 type ProductsType = z.infer<typeof DataSchema>;
 
 const Products = () => {
+  const [searchParams] = useSearchParams();
+  // Get current page from the URL, defaulting to 1 if not provided
+  const currentPage = searchParams.get("page")
+    ? parseInt(searchParams.get("page") || "1", 10)
+    : 1;
   const { data, isLoading } = useQuery<ProductsType>({
-    queryKey: ["products"],
+    queryKey: ["paginateProducts", currentPage],
     queryFn: async () => {
       const response = await axios.get(
-        "https://strapi-store-server.onrender.com/api/products"
+        `https://strapi-store-server.onrender.com/api/products?page=${currentPage}`
       );
       return DataSchema.parse(response.data);
     },
   });
+  const totalPages: number = data?.meta?.pagination?.pageCount ?? 1;
+
+  const navigate = useNavigate();
+  const handlePageChange = (page: number) => {
+    navigate(`/products?page=${page}`);
+  };
+
+  const [pageNext, setPageNext] = useState(2);
+  useEffect(() => {
+    setPageNext(currentPage + 1);
+  }, [currentPage]);
+  const handleNext = () => {
+    if (pageNext > 3) {
+      navigate("/products?page=1");
+      return setPageNext(2);
+    }
+    navigate(`/products?page=${pageNext}`);
+    setPageNext(pageNext + 1);
+  };
+  const [pagePrev, setPagePrev] = useState(3);
+  useEffect(() => {
+    setPagePrev(currentPage - 1);
+  }, [currentPage]);
+  const handlePrev = () => {
+    if (pagePrev < 1) {
+      navigate("/products?page=3");
+      return setPagePrev(2);
+    }
+    navigate(`/products?page=${pagePrev}`);
+    setPagePrev(pagePrev - 1);
+  };
 
   // const { darkTheme } = useAppContext();
 
-  const navigate = useNavigate();
   const displayProduct = (id: number) => {
     navigate(`/products/${id}`);
   };
 
   const [viewOne, setViewOne] = useState(true);
   const [viewTwo, setViewTwo] = useState(false);
-
   const ViewOne = () => {
     setViewOne(true);
     setViewTwo(false);
@@ -147,7 +186,9 @@ const Products = () => {
           <hr />
           <div className={viewTwo ? "allProducts-viewTwo " : "allProducts"}>
             {isLoading ? (
-              <h1 className="loading">Loading...</h1>
+              <div className="loading-section">
+                <h1 className="loading">Loading...</h1>
+              </div>
             ) : (
               data?.data.map((item) => {
                 return (
@@ -192,7 +233,19 @@ const Products = () => {
               })
             )}
           </div>
-          <div className="pagination"></div>
+          <div className="pagination">
+            <button onClick={handlePrev}>prev</button>
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index}
+                onClick={() => handlePageChange(index + 1)}
+                className={currentPage === index + 1 ? "active" : ""}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button onClick={handleNext}>next</button>
+          </div>
         </section>
       </div>
     </Wrapper>
@@ -369,6 +422,9 @@ const Wrapper = styled.main`
   }
   .allProducts {
     margin-top: 1rem;
+  }
+  .loading-section {
+    min-height: 100vh;
   }
   .loading {
     font-size: 2rem;
