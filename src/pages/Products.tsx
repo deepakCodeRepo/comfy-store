@@ -1,4 +1,11 @@
-import { useNavigate, Form, Link, useSearchParams } from "react-router-dom";
+import {
+  useNavigate,
+  Form,
+  Link,
+  useSearchParams,
+  useLocation,
+  useLoaderData,
+} from "react-router-dom";
 import styled from "styled-components";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -24,27 +31,37 @@ const DataSchema = z.object({
   meta: z.object({
     pagination: z.object({
       pageCount: z.number(),
+      total: z.number(),
     }),
   }),
 });
 type ProductsType = z.infer<typeof DataSchema>;
 
 const Products = () => {
+  // const loaderData = useLoaderData();
+  // console.log(loaderData);
+  const location = useLocation();
+  // console.log(location.pathname + location.search);
   const [searchParams] = useSearchParams();
   // Get current page from the URL, defaulting to 1 if not provided
   const currentPage = searchParams.get("page")
     ? parseInt(searchParams.get("page") || "1", 10)
     : 1;
   const { data, isLoading } = useQuery<ProductsType>({
-    queryKey: ["paginateProducts", currentPage],
+    queryKey: ["paginateProducts", location.search],
     queryFn: async () => {
       const response = await axios.get(
-        `https://strapi-store-server.onrender.com/api/products?page=${currentPage}`
+        `https://strapi-store-server.onrender.com/api${
+          location.pathname + location.search
+        }`
       );
+      // `https://strapi-store-server.onrender.com/api/products?page=${currentPage}`
+      // https://strapi-store-server.onrender.com/api/products?search=&category=all&company=all&order=a-z&price=16000
       return DataSchema.parse(response.data);
     },
   });
   const totalPages: number = data?.meta?.pagination?.pageCount ?? 1;
+  const totalProducts: number = data?.meta?.pagination?.total ?? 0;
 
   const navigate = useNavigate();
   const handlePageChange = (page: number) => {
@@ -56,20 +73,23 @@ const Products = () => {
     setPageNext(currentPage + 1);
   }, [currentPage]);
   const handleNext = () => {
-    if (pageNext > 3) {
+    if (pageNext > totalPages) {
       navigate("/products?page=1");
       return setPageNext(2);
     }
     navigate(`/products?page=${pageNext}`);
     setPageNext(pageNext + 1);
   };
-  const [pagePrev, setPagePrev] = useState(3);
+  const [pagePrev, setPagePrev] = useState(totalPages);
   useEffect(() => {
     setPagePrev(currentPage - 1);
   }, [currentPage]);
   const handlePrev = () => {
     if (pagePrev < 1) {
-      navigate("/products?page=3");
+      navigate(`/products?page=${totalPages}`);
+      if (totalPages === 1) {
+        return setPagePrev(1);
+      }
       return setPagePrev(2);
     }
     navigate(`/products?page=${pagePrev}`);
@@ -80,6 +100,12 @@ const Products = () => {
 
   const displayProduct = (id: number) => {
     navigate(`/products/${id}`);
+  };
+
+  const searchProducts = () => {
+    navigate(
+      `/products?search=&category=all&company=all&order=a-z&price=16000&shipping=`
+    );
   };
 
   const [viewOne, setViewOne] = useState(true);
@@ -100,12 +126,17 @@ const Products = () => {
           <Form className="form">
             <div className="form-row">
               <label htmlFor="product">search product</label>
-              <input type="text" id="product" className="search-product" />
+              <input
+                type="text"
+                name="search"
+                id="product"
+                className="search-product"
+              />
             </div>
             <div className="form-row">
               <label htmlFor="category">select category</label>
               <select name="category" id="category" className="search-category">
-                <option value="All">All</option>
+                <option value="all">all</option>
                 <option value="Tables">Tables</option>
                 <option value="Chairs">Chairs</option>
                 <option value="Kids">Kids</option>
@@ -116,7 +147,7 @@ const Products = () => {
             <div className="form-row">
               <label htmlFor="company">select company</label>
               <select name="company" id="company" className="search-company">
-                <option value="All">All</option>
+                <option value="all">all</option>
                 <option value="Modenza">Modenza</option>
                 <option value="Luxora">Luxora</option>
                 <option value="Artifex">Artifex</option>
@@ -126,7 +157,7 @@ const Products = () => {
             </div>
             <div className="form-row">
               <label htmlFor="sort">sort by</label>
-              <select name="sort" id="sort" className="sort-by">
+              <select name="order" id="sort" className="sort-by">
                 <option value="a-z">a-z</option>
                 <option value="z-a">z-a</option>
                 <option value="high">high</option>
@@ -142,12 +173,13 @@ const Products = () => {
               <input
                 type="range"
                 id="price"
+                name="price"
                 className="select-price"
                 min="0"
-                max="1000"
+                max="100000"
                 step="10"
                 // value="1000"
-                defaultValue="1000"
+                defaultValue="26000"
               />
               <div className="price p-below">
                 <span>0</span>
@@ -159,15 +191,31 @@ const Products = () => {
                 Free shipping
               </label>
               {/* //INFO: learn to apply css to checkbox */}
-              <input type="checkbox" id="shipping" className="free-shipping" />
+              <input
+                type="checkbox"
+                name="shipping"
+                id="shipping"
+                className="free-shipping"
+              />
             </div>
-            <button className="search-btn">search</button>
-            <Link to="/products" className="reset">
+            <button className="search-btn" onClick={searchProducts}>
+              search
+            </button>
+            <Link
+              to="/products"
+              className="reset"
+              onClick={() => {
+                navigate("/products");
+                window.location.reload();
+              }}
+            >
               reset
             </Link>
           </Form>
           <div className="view">
-            <p className="products-count">22 products</p>
+            <p className="products-count">
+              {totalProducts} product{totalProducts > 1 ? "s" : ""}
+            </p>
             <div>
               <button
                 className={viewOne ? "view-btn active" : "view-btn"}
@@ -234,17 +282,23 @@ const Products = () => {
             )}
           </div>
           <div className="pagination">
-            <button onClick={handlePrev}>prev</button>
+            <button className="pagination-btns prev-next" onClick={handlePrev}>
+              prev
+            </button>
             {Array.from({ length: totalPages }, (_, index) => (
               <button
                 key={index}
                 onClick={() => handlePageChange(index + 1)}
-                className={currentPage === index + 1 ? "active" : ""}
+                className={`pagination-btns ${
+                  currentPage === index + 1 ? "page-active" : ""
+                }`}
               >
                 {index + 1}
               </button>
             ))}
-            <button onClick={handleNext}>next</button>
+            <button className="pagination-btns prev-next" onClick={handleNext}>
+              next
+            </button>
           </div>
         </section>
       </div>
@@ -498,6 +552,31 @@ const Wrapper = styled.main`
     color: #9031f0;
     margin-top: 1rem;
     margin-bottom: 1rem;
+  }
+  .pagination {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    margin-bottom: 4rem;
+  }
+  .pagination-btns {
+    background-color: hsl(219 44 94);
+    border: none;
+    color: #515050;
+    font-size: 0.8rem;
+    padding: 1rem;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+  }
+  .pagination-btns:hover {
+    background-color: hsl(219 44 85);
+  }
+  .pagination-btns.page-active {
+    background-color: hsl(219 44 76);
+  }
+  .prev-next {
+    text-transform: uppercase;
   }
   @media screen and (min-width: 640px) {
     .form {

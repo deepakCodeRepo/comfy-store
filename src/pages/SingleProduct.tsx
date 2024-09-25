@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -22,20 +22,32 @@ const SingleProductSchema = z.object({
 type SingleProductType = z.infer<typeof SingleProductSchema>;
 
 const SingleProduct = () => {
-  const location = useLocation();
-  const { pathname } = location;
+  const params = useParams();
 
-  const id = parseInt(pathname.split("products/")[1]);
+  //INFO: another way to get the "id"
+  // const location = useLocation();
+  // const { pathname } = location;
+  // const id = parseInt(pathname.split("products/")[1]);
 
   const { data, isLoading } = useQuery<SingleProductType>({
-    queryKey: ["single-product", id],
+    queryKey: ["singleProduct", params.id],
     queryFn: async () => {
       const response = await axios.get(
-        `https://strapi-store-server.onrender.com/api/products/${id}`
+        `https://strapi-store-server.onrender.com/api/products/${params.id}`
       );
       return SingleProductSchema.parse(response.data);
     },
   });
+
+  //NOTE: providing default values after destructuring
+  const {
+    image = undefined,
+    title = "",
+    price = "0",
+    description = "",
+    colors = [],
+    company = "",
+  } = data?.data?.attributes || {};
 
   const { darkTheme } = useAppContext();
 
@@ -66,27 +78,24 @@ const SingleProduct = () => {
                 Products
               </Link>
             </div>
-            <img
-              src={data?.data.attributes.image}
-              alt={data?.data.attributes.title}
-            />
+            <img src={image} alt={title} />
           </div>
           <div className="info-section">
             <h1 className={darkTheme ? "title title-dark" : "title"}>
-              {data?.data.attributes.title}
+              {title}
             </h1>
             <h4 className={darkTheme ? "company company-dark" : "company"}>
-              {data?.data.attributes.company}
+              {company}
             </h4>
             <p className={darkTheme ? "price price-dark" : "price"}>
-              ${parseInt(data?.data.attributes.price ?? "0") / 100}
+              ${parseInt(price ?? "0") / 100}
             </p>
             <p
               className={
                 darkTheme ? "description description-dark" : "description"
               }
             >
-              {data?.data.attributes.description}
+              {description}
             </p>
             <div className="colors">
               <p
@@ -96,7 +105,7 @@ const SingleProduct = () => {
               >
                 Colors
               </p>
-              {data?.data.attributes.colors.map((item, index) => {
+              {colors.map((item, index) => {
                 return (
                   // FIXME: add active state to the buttons
                   <button

@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { useNavigate, NavLink } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate, NavLink, useLoaderData } from "react-router-dom";
+import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { z } from "zod";
 import { useAppContext } from "../utilities/AppProvider";
@@ -20,16 +21,34 @@ const DataSchema = z.object({
 });
 type DataSchemaType = z.infer<typeof DataSchema>;
 
+const featuredProductsQuery = {
+  queryKey: ["featuredProducts"],
+  queryFn: async () => {
+    const response = await axios.get(
+      "https://strapi-store-server.onrender.com/api/products?featured=true"
+    );
+    return DataSchema.parse(response.data);
+  },
+};
+
+export const loader = (queryClient: QueryClient) => async () => {
+  const response = await queryClient.ensureQueryData(featuredProductsQuery);
+  //NOTE:products is typed as DataSchemaType["data"]. This means that products must conform to the structure of the data field as defined in the DataSchemaType type
+  const products: DataSchemaType["data"] = response.data;
+  return { products };
+};
+
 const Landing = () => {
-  const { data, isLoading } = useQuery<DataSchemaType>({
-    queryKey: ["featured-products"],
-    queryFn: async () => {
-      const response = await axios.get(
-        "https://strapi-store-server.onrender.com/api/products?featured=true"
-      );
-      return DataSchema.parse(response.data);
-    },
-  });
+  const { products } = useLoaderData() as { products: DataSchemaType["data"] };
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Once products are loaded, set isLoading to false
+    if (products) {
+      setIsLoading(false);
+    }
+  }, [products]);
 
   const { darkTheme } = useAppContext();
 
@@ -78,7 +97,7 @@ const Landing = () => {
             <h1 className="loading">Loading...</h1>
           ) : (
             <div className="featured-products">
-              {data?.data.map((item) => {
+              {products.map((item) => {
                 return (
                   <div
                     key={item.id}

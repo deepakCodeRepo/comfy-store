@@ -15,6 +15,7 @@ import {
   SingleProduct,
 } from "./pages";
 import AppProvider from "./utilities/AppProvider";
+import { loader as landingLoader } from "./pages/Landing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
         index: true,
         element: <Landing />,
         errorElement: <Error />,
+        loader: landingLoader(queryClient),
       },
       {
         path: "about",
